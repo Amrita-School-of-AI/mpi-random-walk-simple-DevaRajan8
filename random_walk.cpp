@@ -3,6 +3,8 @@
 #include <ctime>   // For time
 #include <mpi.h>
 
+using namespace std;
+
 void walker_process();
 void controller_process();
 
@@ -65,6 +67,27 @@ void walker_process()
     //       "Rank X: Walker finished in Y steps."
     //    b. Send an integer message to the controller (rank 0) to signal completion.
     //    c. Break the loop.
+
+    int position=0; // Start at position 0
+    int steps=0;
+    int send_data;
+    while(steps<max_steps)
+    {
+        int step=(rand()%2==0) ?-1:1;
+        position+=step;
+        steps++;
+        if(position< -domain_size || position >domain_size)
+        {
+            cout << "Rank " << world_rank << ": Walker finished in " << steps << " steps." << endl;
+            MPI_Send(&steps,1,MPI_INT,0,0,MPI_COMM_WORLD);
+            break;
+        }
+    }
+    if(steps==max_steps)
+    {
+        cout << "Rank " << world_rank << ": Walker finished in " << steps << " steps." << endl;
+        MPI_Send(&steps,1,MPI_INT,0,0,MPI_COMM_WORLD);
+    }
 }
 
 void controller_process()
@@ -76,4 +99,12 @@ void controller_process()
     //    a message from any walker that finishes.
     // 4. After receiving messages from all walkers, print a final summary message.
     //    For example: "Controller: All X walkers have finished."
+    
+    int walkers=world_size-1;
+    int received;
+    for(int i=0;i<walkers;i++)
+    {
+        MPI_Recv(&received,1,MPI_INT,MPI_ANY_SOURCE,0,MPI_COMM_WORLD,MPI_STATUS_IGNORE);
+    }
+    cout << "Controller: All " << walkers << " walkers have finished." << endl;
 }
